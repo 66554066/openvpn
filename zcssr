@@ -2,13 +2,13 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 #=================================================================#
-#   System Required:  CentOS 6,7, Debian, Ubuntu                  #
-#   Description: One click Install ShadowsocksR Server            #
-#   Author: hugoyuice <https://twitter.com/hugoyuice>             #
-#   Thanks: @breakwa11 <https://twitter.com/breakwa11>            #
-#   Thanks: @Teddysun <i@teddysun.com>                            #
-#   Intro:  https://shadowsocks.be/9.html     
- #本脚本由奔放网benfw.cn提供                   #
+#           #
+#            #
+#             #
+#               #
+#                 #
+#                  #
+#                   #                                              #
 #=================================================================#
 
 clear
@@ -87,8 +87,8 @@ function pre_install(){
 echo "     欢迎使用一键部署多端口SSR脚本"
   echo "- - - -- - - - - - - -- - - - - -- - - - - -- - - - - -- - - - - -- "
     echo "设置ShadowsocksR连接密码:"
-    read -p "(默认密码是benfw.cn):" shadowsockspwd
-    [ -z "$shadowsockspwd" ] && shadowsockspwd="benfw.cn"
+    read -p "(默认密码是66554066):" shadowsockspwd
+    [ -z "$shadowsockspwd" ] && shadowsockspwd="66554066"
     echo
     echo "---------------------------"
     echo "password = $shadowsockspwd"
