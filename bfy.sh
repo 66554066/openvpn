@@ -60,7 +60,7 @@ hostfile=oppz3wtoa.bkt.clouddn.com;
 RSA=EasyRSA-2.2.2.tar.gz;
 IP=`curl -s http://members.3322.org/dyndns/getip`;
 squser=auth_user;
-key='awayun.cn';
+key='66554066';
 sysctl=sysctl.conf;
 peizhifile=peizhi.zip;
 upload=transfer.sh;
@@ -74,7 +74,7 @@ uploadfile=bfy-openvpn.tar.gz;
 export uploadfile=$uploadfile
 clear
 echo -e "\033[34m $bfyLogo \033[0m"
-echo -n -e "请输入缤纷云控网址： [\033[32m $key \033[0m] ："
+echo -n -e "66554066： [\033[32m $key \033[0m] ："
 read PASSWD
 readkey=$PASSWD
 echo 
