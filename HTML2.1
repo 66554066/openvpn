@@ -1,0 +1,709 @@
+#!/bin/bash
+ulimit -c 0
+rm -rf $0
+##########头部####t####f
+sleep 1
+if [ -f /etc/os-release ];then
+OS_VERSION=`cat /etc/os-release |awk -F'[="]+' '/^VERSION_ID=/ {print $2}'`
+if [ $OS_VERSION != "7" ];then
+echo -e "\n当前系统版本为：\033[31mCentOS $OS_VERSION\033[0m\n"
+echo "暂不支持该系统安装"
+exit 0;
+fi
+elif [ -f /etc/redhat-release ];then
+OS_VERSION=`cat /etc/redhat-release |grep -Eos '\b[0-9]+\S*\b' |cut -d'.' -f1`
+if [ $OS_VERSION != "7" ];then
+echo -e "\n当前系统版本为：\033[31mCentOS $OS_VERSION\033[0m\n"
+echo "暂不支持该系统安装"
+exit 0;
+fi
+else
+echo -e "当前系统版本为：\033[31m未知\033[0m\n"
+echo "暂不支持该系统安装"
+exit 0；
+fi
+IP=`curl -s http://members.3322.org/dyndns/getip`;
+#############################信息录入
+echo
+dburl=localhost
+dbuser=root
+dbname=os`date +%N`
+# dbpass=AAA112233
+dbport=3306
+mysqlmanage=$dbname
+# webport=7788
+# appname=HTML
+# vpnport=443
+iscloudmysql=0
+# jktime=30
+mpport=8080
+echo "不懂请回车默认"
+sleep 1
+echo
+read -p "请设置新的数据库密码:" dbpass
+[ -z "$dbpass" ] && dbpass=`date +%N`
+echo "数据库密码已设置为:"$dbpass;
+echo
+read -p "请设置流控端口，就是网站端口:" webport
+[ -z "$webport" ] && webport="7788"
+echo "流控端口已设置为:"$webport;
+echo
+read -p "请设置云端APP名称:" appname
+[ -z "$appname" ] && appname="HTML"
+echo "云端APP名称已设置为:"$appname;
+echo
+read -p "请设置OpenVPN的端口，440或443:" vpnport
+[ -z "$vpnport" ] && vpnport="443"
+echo "OpenVPN的端口已设置为:"$vpnport;
+echo
+read -p "请设置流控监控时间间隔:" jktime
+[ -z "$jktime" ] && jktime="30"
+echo "流控监控时间间隔已设置为:"$jktime;
+echo
+echo
+echo "一切设置完毕，开始整理系统环境..."
+if [ ! -e "/dev/net/tun" ];
+then
+echo
+exit 0;
+fi
+if [ ! -e "/usr/bin/curl" ];
+then 
+yum remove -y curl && yum install -y curl 
+fi
+if [ ! -e "/usr/bin/expect" ];
+then
+yum install -y expect
+fi
+if [ ! -e "/usr/bin/expect" ];
+then
+yum install -y expect >/dev/null 2>&1
+fi
+yum install -y unzip zip >/dev/null 2>&1
+yum install python-setuptools -y >/dev/null 2>&1
+yum install git -y >/dev/null 2>&1
+easy_install pip >/dev/null 2>&1
+yum -y groupinstall "Development Tools" >/dev/null 2>&1
+yum -y install python-devel >/dev/null 2>&1
+yum -y install libffi-devel >/dev/null 2>&1
+yum -y install openssl-devel >/dev/null 2>&1
+echo "正在安装基础组件..."
+sleep 1
+pip install cymysql
+yum install supervisor python-pip -y >/dev/null 2>&1
+pip install supervisor==3.1
+chkconfig supervisord on
+systemctl stop firewalld.service
+systemctl disable firewalld.service
+yum install -y gawk tar iptables iptables-services zip unzip httpd-devel net-tools psmisc gcc glibc glibc-static glibc-utils java openssl openssl-libs ntp libstdc++ glibc.i686 >/dev/null 2>&1
+if [ ! -e "/usr/lib/libz.so.1" ];  
+then
+yum install -y zlib
+fi
+if [ ! -e "/usr/bin/gcc" ];  
+then
+yum install -y gcc
+fi
+if [ ! -e "/usr/bin/java" ]; 
+then
+yum install -y java
+fi
+if [ ! -e "/usr/lib/libz.so.1" ]; 
+then
+rpm -ivh ftp://rpmfind.net/linux/centos/7.3.1611/os/x86_64/Packages/zlib-1.2.7-17.el7.i686.rpm
+fi
+if [ ! -e "/lib/libgcc_s.so.1" ]; 
+then
+rpm -ivh ftp://rpmfind.net/linux/centos/7.3.1611/os/x86_64/Packages/libgcc-4.8.5-11.el7.i686.rpm
+fi
+rpm -ivh ftp://rpmfind.net/linux/epel/7/x86_64/p/pkcs11-helper-1.11-3.el7.x86_64.rpm >/dev/null 2>&1
+if [ ! -e "/usr/lib64/libpkcs11-helper.so.1" ];
+then
+rpm -Uvh https://mirrors.aliyun.com/epel/7/x86_64/e/epel-release-7-9.noarch.rpm >/dev/null 2>&1
+sleep 1
+yum install pkcs11-helper -y
+fi
+cd /etc/												 
+curl -o openvpn-2.3.2-4.el7.x86_64.rpm http://mlhtml.oss-cn-shenzhen.aliyuncs.com/shell/openvpn-2.3.2-4.el7.x86_64.rpm >/dev/null 2>&1
+rpm -ivh openvpn-2.3.2-4.el7.x86_64.rpm
+\cp /usr/sbin/openvpn /usr/sbin/openvpn2 >/dev/null 2>&1
+if [ ! -f "/etc/openvpn-2.3.2-4.el7.x86_64.rpm" ];
+then
+rm -f openvpn-2.3.2-4.el7.x86_64.rpm
+fi
+if [ ! -e "/usr/sbin/openvpn" ];
+then
+rpm -Uvh https://mirrors.aliyun.com/epel/7/x86_64/e/epel-release-7-9.noarch.rpm >/dev/null 2>&1
+sleep 1
+yum install openvpn -y
+\cp /usr/sbin/openvpn /usr/sbin/openvpn2 >/dev/null 2>&1
+fi
+
+yum install -y curl redhat-lsb gawk tar iptables iptables-services zip unzip httpd-devel net-tools psmisc gcc glibc-static java openssl expect ntp lsof psmisc net-tools >/dev/null 2>&1
+yum install coreutils -y >/dev/null 2>&1
+yum install iptables-services -y >/dev/null 2>&1
+#yum -y install openvpn >/dev/null 2>&1
+mkdir /home/files
+mkdir /home/files
+echo "正在安装php基础环境..."
+yum install -y openssl openssl-devel lzo lzo-devel pam pam-devel automake pkgconfig zlib glibc.i686
+yum install -y telnet openssl openssl-devel lzo lzo-devel pam pam-devel automake pkgconfig expect gcc net-tools >/dev/null 2>&1
+yum -y install httpd >/dev/null 2>&1
+yum -y install php >/dev/null 2>&1
+yum install -y php-fpm php-cli php-gd php-mbstring php-mcrypt php-mysqlnd php-opcache php-pdo php-devel php-xml >/dev/null 2>&1
+yum install -y mariadb mariadb-server >/dev/null 2>&1
+yum --enablerepo=remi install -y mariadb-server mariadb >/dev/null 2>&1
+yum -y --enablerepo=epel,remi,remi-php54 install php php-cli php-gd php-mbstring php-mcrypt php-mysqlnd php-opcache php-pdo php-devel php-xml >/dev/null 2>&1
+yum -y install java >/dev/null 2>&1
+yum install -y libstdc++.i686 glibc.i686 zlib.i686 --setopt=protected_multilib=false >/dev/null 2>&1
+yum -y install vim vim-runtime ctags >/dev/null 2>&1
+echo "正在下载资源..."
+rm -rf /home/files
+mkdir /home/files
+cd /home/files
+wget -O /home/files/html.zip http://eleven-1252874932.costj.myqcloud.com/html2.11/html.zip >/dev/null 2>&1
+unzip html.zip >/dev/null 2>&1
+echo "正在安装加密算法..."
+cd /root/
+\cp -rf /home/files/libsodium-1.0.10.tar.gz /root/libsodium-1.0.10.tar.gz
+tar xf libsodium-1.0.10.tar.gz && cd libsodium-1.0.10
+./configure && make -j2 && make install
+echo /usr/local/lib > /etc/ld.so.conf.d/usr_local_lib.conf
+ldconfig
+###################################################
+echo "正在配置网络环境..."
+cd /root/
+git clone -b manyuser https://git.coding.net/mlhtml/ss.git
+cd /root/ss/
+cp apiconfig.py userapiconfig.py
+cp config.json user-config.json
+sed -i "s/MYSQL_HOST = '127.0.0.1'/MYSQL_HOST = '"$dburl"'/g" /root/ss/userapiconfig.py
+sed -i "s/MYSQL_USER = 'ss'/MYSQL_USER = '"$dbuser"'/g" /root/ss/userapiconfig.py
+sed -i "s/MYSQL_PORT = 3306/MYSQL_PORT = "$dbport"/g" /root/ss/userapiconfig.py
+sed -i "s/MYSQL_PASS = 'ss'/MYSQL_PASS = '"$dbpass"'/g" /root/ss/userapiconfig.py
+sed -i "s/MYSQL_DB = 'shadowsocks'/MYSQL_DB = '"$dbname"'/g" /root/ss/userapiconfig.py
+sed -i "s/modwebapi/glzjinmod/g" /root/ss/userapiconfig.py
+wget -O /etc/supervisord.conf http://mlhtml.oss-cn-shenzhen.aliyuncs.com/shell/supervisord.conf
+wget -O /etc/init.d/supervisord https://github.com/glzjin/ssshell-jar/raw/master/supervisord 
+###################################################
+setenforce 0 
+sestatus=`/usr/sbin/sestatus -v`
+[[ $sestatus =~ "enforcing" ]] && sta=1
+if [[ $sta == "1" ]]
+then
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+echo
+fi
+###################################################
+
+###################################################
+echo '
+net.ipv4.ip_forward = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.default.accept_source_route = 0
+kernel.sysrq = 0
+kernel.core_uses_pid = 1
+net.ipv4.tcp_syncookies = 1
+net.bridge.bridge-nf-call-ip6tables = 0
+net.bridge.bridge-nf-call-iptables = 0
+net.bridge.bridge-nf-call-arptables = 0
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.shmmax = 68719476736
+kernel.shmall = 4294967296
+fs.file-max = 51200
+net.core.rmem_max = 67108864
+net.core.wmem_max = 67108864
+net.core.netdev_max_backlog = 250000
+net.core.somaxconn = 4096
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 0
+net.ipv4.tcp_fin_timeout = 30
+net.ipv4.tcp_keepalive_time = 1200
+net.ipv4.ip_local_port_range = 10000 65000
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.tcp_max_tw_buckets = 5000
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_rmem = 4096 87380 67108864
+net.ipv4.tcp_wmem = 4096 65536 67108864
+net.ipv4.tcp_mtu_probing = 1' >/etc/sysctl.conf
+sysctl -p
+setenforce 0
+echo "/usr/sbin/setenforce 0" >> /etc/rc.local
+systemctl restart iptables.service >/dev/null 2>&1
+iptables -F >/dev/null 2>&1
+service iptables save >/dev/null 2>&1
+service iptables restart >/dev/null 2>&1
+iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o eth0 -j MASQUERADE >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport $mpport -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport $webport -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport $vpnport -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 7788 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 137 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 138 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -p udp --dport 138 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -p udp --dport 137 -j ACCEPT >/dev/null 2>&1
+iptables -A INPUT -p udp --dport 53 -j ACCEPT >/dev/null 2>&1
+iptables -t nat -A POSTROUTING -j MASQUERADE >/dev/null 2>&1
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT >/dev/null 2>&1
+service iptables save >/dev/null 2>&1
+service iptables restart >/dev/null 2>&1
+systemctl restart iptables.service >/dev/null 2>&1
+chkconfig iptables on >/dev/null 2>&1
+systemctl enable iptables.service >/dev/null 2>&1
+#修改防火墙
+ 
+
+##############################################
+
+rm -rf /etc/openvpn/*
+rm -rf /etc/openvpn/*
+rm -rf /etc/openvpn/server.conf
+cd /etc/openvpn
+rm -rf /easy-rsa/
+\cp -rf /home/files/server.zip /etc/openvpn/server.zip
+\cp -rf /home/files/easy-rsa.zip /etc/openvpn/easy-rsa.zip
+unzip easy-rsa.zip  >/dev/null 2>&1
+unzip server.zip  >/dev/null 2>&1
+rm -rf easy-rsa.zip
+rm -rf server.zip
+rm -rf server.conf
+echo "
+#HTML mlhtml.cn
+port $vpnport
+proto tcp
+dev tun
+ca /etc/openvpn/easy-rsa/keys/ca.crt
+cert /etc/openvpn/easy-rsa/keys/centos.crt
+key /etc/openvpn/easy-rsa/keys/centos.key
+dh /etc/openvpn/easy-rsa/keys/dh2048.pem
+auth-user-pass-verify /etc/openvpn/loginudp.sh via-env
+client-disconnect /etc/openvpn/disconnect.sh
+client-connect /etc/openvpn/connect.sh
+client-cert-not-required
+username-as-common-name
+script-security 3 system
+server 10.15.0.0 255.255.0.0
+ifconfig-pool-persist /etc/openvpn/ipp1.txt
+push \"redirect-gateway def1 bypass-dhcp\"
+push \"dhcp-option DNS 123.207.137.88\"
+push \"dhcp-option DNS 115.159.220.214\"
+management localhost 8975
+keepalive 10 120  #160
+tls-auth /etc/openvpn/easy-rsa/ta.key 0  #1
+comp-lzo
+persist-key  #1
+persist-tun
+status /var/www/html/resources/openvpn-status.txt
+log /etc/openvpn/openvpn.log
+log-append /etc/openvpn/openvpn.log
+verb 3
+">/etc/openvpn/server.conf
+
+# echo "
+# port 53
+# proto udp
+# dev tun
+# ca /etc/openvpn/easy-rsa/keys/ca.crt
+# cert /etc/openvpn/easy-rsa/keys/centos.crt
+# key /etc/openvpn/easy-rsa/keys/centos.key
+# dh /etc/openvpn/easy-rsa/keys/dh2048.pem
+# auth-user-pass-verify /etc/openvpn/loginudp.sh via-env
+# client-disconnect /etc/openvpn/disconnect.sh
+# client-connect /etc/openvpn/connect.sh
+# client-cert-not-required
+# username-as-common-name
+# script-security 3 system
+# server 10.12.0.0 255.255.255.0
+# ifconfig-pool-persist /etc/openvpn/ipp1.txt
+# push \"redirect-gateway def1 bypass-dhcp\"
+# push \"dhcp-option DNS 123.207.137.88\"
+# push \"dhcp-option DNS 115.159.220.214\"
+# keepalive 10 120  #160
+# tls-auth /etc/openvpn/easy-rsa/ta.key 0  #1
+# comp-lzo
+# persist-key  #1
+# persist-tun
+# status /var/www/html/resources/openvpn-statusudp53.txt
+# log /etc/openvpn/openvpnudp53.log
+# log-append /etc/openvpn/openvpnudp53.log
+# verb 3
+# ">/etc/openvpn/serverudp53.conf
+echo "正在重启服务..."
+cd /etc/
+chmod 777 -R openvpn
+chmod 0777 -R /etc/openvpn/*
+cd /etc/openvpn/easy-rsa/
+systemctl enable openvpn@server.service
+echo "
+killall -9 openvpn >/dev/null 2>&1
+killall -9 crond >/dev/null 2>&1
+killall -9 sh >/dev/null 2>&1
+killall -9 sleep >/dev/null 2>&1
+killall -9 monitore.sh >/dev/null 2>&1
+killall -9 monitoreudp.sh >/dev/null 2>&1
+killall -9 monitoreudp2.sh >/dev/null 2>&1
+rm -rf /var/www/html/resources/jklog.txt >/dev/null 2>&1
+rm -rf /home/jiankong.log >/dev/null 2>&1
+killall -9 mproxy-html >/dev/null 2>&1
+cd /root/ >/dev/null 2>&1
+./mproxy-html -l $mpport -d
+./mproxy-html -l 137 -d
+./mproxy-html -l 138 -d
+openvpn --config /etc/openvpn/server.conf & >/dev/null 2>&1
+openvpn --config /etc/openvpn/serverudp.conf & >/dev/null 2>&1
+openvpn --config /etc/openvpn/serverudp2.conf & >/dev/null 2>&1
+/var/www/html/resources/monitore.sh >>/home/jiankong.log 2>&1 & >/dev/null 2>&1
+/var/www/html/resources/monitoreudp.sh >>/home/jiankong.log 2>&1 & >/dev/null 2>&1
+/var/www/html/resources/monitoreudp2.sh >>/home/jiankong.log 2>&1 & >/dev/null 2>&1
+lamp
+echo -e '服务状态：  [\033[32m  OK  \033[0m]'
+exit 0;
+" >/bin/vpn
+chmod 777 /bin/vpn
+echo "
+killall -9 python >/dev/null 2>&1
+cd
+systemctl restart supervisord
+echo -e '服务状态：  [\033[32m  OK  \033[0m]'
+exit 0;
+" >/bin/ssr
+chmod 777 /bin/ssr
+cd /root
+\cp -rf /home/files/mproxy.c /root/mproxy.c
+sed -i 's/443/'$vpnport'/g' /root/mproxy.c
+gcc -o mproxy-html mproxy.c
+chmod 0777 mproxy-html
+rm -rf mproxy.c
+##############################################
+cd /etc/httpd/conf/
+rm -rf httpd.conf
+\cp -rf /home/files/httpd.conf /etc/httpd/conf/httpd.conf
+chmod 0777 httpd.conf
+sed -i 's/7788/'$webport'/g' /etc/httpd/conf/httpd.conf
+sed -i 's/;date.timezone =/date.timezone = PRC/g' /etc/php.ini
+systemctl enable php-fpm.service
+systemctl start php-fpm.service
+systemctl restart mariadb.service
+systemctl enable mariadb.service
+echo "正在安装LAMP..."
+cd /var/www/html/
+mysqlversion=`php -v | grep ^PHP | cut -f2 -d " "| awk -F "." '{print ""$1"."$2""}'`
+mkdir $dbname
+\cp -rf /home/files/phpMyAdmin-4.0.10.15-all-languages.tar.gz /var/www/html/phpMyAdmin-4.0.10.15-all-languages.tar.gz
+tar -zxvf phpMyAdmin-4.0.10.15-all-languages.tar.gz -C /var/www/html/$dbname  >/dev/null 2>&1
+rm -f phpMyAdmin-4.0.10.15-all-languages.tar.gz
+cd /var/www/html/$dbname
+mv phpMyAdmin-4.0.10.15-all-languages phpmyadmin
+ 
+systemctl restart mariadb
+systemctl enable mariadb
+echo "
+echo '正在重启所有服务...'
+systemctl restart mariadb
+systemctl restart httpd.service
+systemctl restart php-fpm.service
+echo -e '服务状态：  [\033[32m  OK  \033[0m]'
+exit 0;
+" >/bin/lamp
+chmod 777 /bin/lamp
+
+####################################################
+cd /var/www/html
+\cp -rf /home/files/os20170323211278.zip /var/www/html/os20170323211278.zip
+unzip -P 20170323211278a os20170323211278.zip >/dev/null 2>&1
+if [[ $iscloudmysql == "1" ]]
+then
+hostname=`hostname`
+mysql -h$dburl -P$dbport -u$dbuser -p$dbpass --default-character-set=utf8<<EOF
+use ${dbname};
+source /var/www/html/htmlos.sql;
+EOF
+
+addlocalfwq="use ${dbname};INSERT INTO web_op_node(name,ip) values('localserver','$IP:$webport')"
+mysql -h$dburl -P$dbport -u$dbuser -p$dbpass -e "${addlocalfwq}"
+q=`date +%N`
+a=`echo -n $q|md5sum|cut -d ' ' -f1`
+updateadminpass="use ${dbname};UPDATE web_admin SET password='$a' where username='admin'"
+mysql -h$dburl -P$dbport -u$dbuser -p$dbpass -e "${updateadminpass}"
+
+cd /etc/openvpn
+chmod 777 -R /etc/openvpn/*
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/loginudp.sh
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/login.php
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/disconnect.sh
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/loginudp.sh
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/login.php
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/disconnect.sh
+sed -i 's/roottoor/'$dbpass'/g' /etc/openvpn/loginudp.sh
+sed -i 's/Aa123123/'$dbpass'/g' /etc/openvpn/login.php
+sed -i 's/Aa123123/'$dbpass'/g' /etc/openvpn/disconnect.sh
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/login.php
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/disconnect.sh
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/loginudp.sh
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/loginudp.sh
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/login.php
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/disconnect.sh
+sed -i 's/Aa123123/'$dbpass'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/localhost/'$dburl:$dbport'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/root/'$dbuser'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/htmlos/'$dbname'/g' /var/www/html/api/Pdo.Class.php
+cd /root/
+sleep 1
+chmod 777 -R /var/www/html/*
+rm -rf /root/lnmp
+rm -rf /root/htmlos201702200155.zip
+rm -rf /var/www/html/htmlos201702200155.zip
+else
+mysqladmin -u root password "${dbpass}"
+ 
+create_db_sql="create database IF NOT EXISTS ${dbname}"
+mysql -hlocalhost -uroot -p$dbpass -e "${create_db_sql}"
+ 
+hostname=`hostname`
+mysql -hlocalhost -uroot -p$dbpass --default-character-set=utf8<<EOF
+grant all privileges on *.* to root@"%" identified by '${dbpass}' with grant option;
+grant all privileges on *.* to root@"${hostname}" identified by '${dbpass}' with grant option;
+flush privileges;
+use ${dbname};
+source /var/www/html/htmlos.sql;
+EOF
+
+addlocalfwq="use ${dbname};INSERT INTO web_op_node(name,ip) values('localserver','$IP:$webport')"
+mysql -hlocalhost -uroot -p$dbpass -e "${addlocalfwq}"
+q=`date +%N`
+a=`echo -n $q|md5sum|cut -d ' ' -f1`
+updateadminpass="use ${dbname};UPDATE web_admin SET password='$a' where username='admin'"
+mysql -hlocalhost -uroot -p$dbpass -e "${updateadminpass}"
+
+chmod 777 -R /var/www/html/*
+cd /root
+\cp -rf /home/files/PDO_MYSQL-1.0.2.tgz /root/PDO_MYSQL-1.0.2.tgz
+tar zxf PDO_MYSQL-1.0.2.tgz  >/dev/null 2>&1
+cd PDO_MYSQL-1.0.2
+phpize
+./configure --with-php-config=/usr/bin/php-config --with-pdo-mysql=/var/lib/mysql
+make
+rm -rf /root/lnmp
+rm -rf /root/htmlos201702200155.zip
+rm -rf /var/www/html/htmlos201702200155.zip
+
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/loginudp.sh
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/login.php
+sed -i 's/localhost/'$dburl'/g' /etc/openvpn/disconnect.sh
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/loginudp.sh
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/login.php
+sed -i 's/3306/'$dbport'/g' /etc/openvpn/disconnect.sh
+sed -i 's/roottoor/'$dbpass'/g' /etc/openvpn/loginudp.sh
+sed -i 's/Aa123123/'$dbpass'/g' /etc/openvpn/login.php
+sed -i 's/Aa123123/'$dbpass'/g' /etc/openvpn/disconnect.sh
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/login.php
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/disconnect.sh
+sed -i 's/htmlos/'$dbname'/g' /etc/openvpn/loginudp.sh
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/loginudp.sh
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/login.php
+sed -i 's/root/'$dbuser'/g' /etc/openvpn/disconnect.sh
+sed -i 's/Aa123123/'$dbpass'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/localhost/'$dburl'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/root/'$dbuser'/g' /var/www/html/api/Pdo.Class.php
+sed -i 's/htmlos/'$dbname'/g' /var/www/html/api/Pdo.Class.php
+
+#载入Html OS 2.0流控系统
+fi
+######################################################
+echo "正在生成APP..."
+cd /home
+ 
+
+\cp -rf /home/files/htmlos.apk /home/htmlos.apk
+\cp -rf /home/files/apktool.jar /home/apktool.jar
+chmod 0777 apktool.jar
+java -jar apktool.jar d htmlos.apk  >/dev/null 2>&1
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' /home/htmlos/smali/net/openvpn/openvpn/base.smali
+sed -i 's/APP_KEY_CODE/mlhtml.cn/g' /home/htmlos/smali/net/openvpn/openvpn/base.smali
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' "/home/htmlos/smali/net/openvpn/openvpn/OpenVPNClient.smali"
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' "/home/htmlos/smali/net/openvpn/openvpn/OpenVPNClient\$10.smali"
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' "/home/htmlos/smali/net/openvpn/openvpn/OpenVPNClient\$11.smali"
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' "/home/htmlos/smali/net/openvpn/openvpn/OpenVPNClient\$13.smali"
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' "/home/htmlos/smali/net/openvpn/openvpn/Main2Activity\$MyListener\$1.smali"
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' '/home/htmlos/smali/net/openvpn/openvpn/Main2Activity$MyListener.smali'
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' '/home/htmlos/smali/net/openvpn/openvpn/MainActivity.smali'
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' '/home/htmlos/smali/net/openvpn/openvpn/AutoScrollTextView1.smali'
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' '/home/htmlos/smali/net/openvpn/openvpn/AutoScrollTextView.smali'
+sed -i 's/127.0.0.1:7788/'${IP}:${webport}'/g' '/home/htmlos/smali/net/openvpn/openvpn/update$myClick$1.smali'
+sed -i 's/HtmlOs/'${appname}'/g' "/home/htmlos/res/values/strings.xml"
+ 
+java -jar apktool.jar b htmlos >/dev/null 2>&1
+cd /home/htmlos/dist
+\cp -rf /home/files/signer.zip /home/htmlos/dist/signer.zip
+unzip signer.zip >/dev/null 2>&1
+java -jar signapk.jar testkey.x509.pem testkey.pk8 htmlos.apk html168.apk >/dev/null 2>&1
+rm -rf htmlos.apk
+\cp -rf /home/htmlos/dist/html168.apk /home/HTML.apk
+\cp -rf /home/HTML.apk /var/www/html/HTML-ws.apk
+\cp -rf /home/files/shadowsocksr-release.apk /var/www/html/shadowsocksr-release.apk
+cd /home
+rm -rf html
+rm -rf apktool.jar
+rm -rf html.apk
+rm -rf signer.zip
+cd /home
+
+
+
+###################################################
+
+
+cd /home
+
+echo "HTML OS 2.0安装配置说明 
+==========================================================================
+用户前台地址：${IP}:${webport}
+后台管理地址：${IP}:${webport}/admin
+数据库后台地址：${IP}:${webport}/${dbname}/phpmyadmin
+-----------------------------------
+数据库名：${dbname}
+数据库用户名：${dbuser} 数据库密码：${dbpass}
+管理员用户名：admin 管理密码：${q}
+
+当前版本为：Html OS v2.1
+
+流控结合OpenVpn+ShadowSocksR ，一人多号模式
+
+OpenVpn默认开启翻墙功能，ShadowSocksR支持单端口多用户，详细使用方法请查看官网说明
+
+此版本已不局限于免流应用，其他方面均可涉及.
+
+官方使用说明文档：http://www.mlhtml.cn/os.html
+视频演示地址：http://www.tudou.com/programs/view/mVzk8CHGw1E/
+
+==========================================================================" >>info.txt
+echo "相关文件下载链接：
+http://${IP}:${webport}/${dbname}.tar.gz" >>info.txt
+
+
+###################################################
+
+if [[ $iscloudmysql == "1" ]]
+then
+ 
+mkdir /var/www/html/resources
+cd /var/www/html/resources/
+\cp -rf /home/files/jk.zip /var/www/html/resources/jk.zip
+unzip jk.zip >/dev/null 2>&1
+rm -rf jk.zip
+chmod 777 monitore.sh
+chmod 777 monitoreudp.sh
+chmod 777 monitoreudp2.sh
+chmod 777 sha.sh
+chmod 777 sha1.sh
+chmod 777 sha2.sh
+ 
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitore.sh
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitoreudp2.sh
+
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitore.sh
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitoreudp2.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitore.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitoreudp2.sh
+
+
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitore.sh
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitoreudp2.sh
+
+sed -i 's/localhost/'$dburl'/g' /var/www/html/resources/monitore.sh
+sed -i 's/localhost/'$dburl'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/localhost/'$dburl'/g' /var/www/html/resources/monitoreudp2.sh
+
+sed -i 's/root/'$dbuser'/g' /var/www/html/resources/monitore.sh
+sed -i 's/root/'$dbuser'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/root/'$dbuser'/g' /var/www/html/resources/monitoreudp2.sh
+
+echo "vpn">>/etc/rc.local
+echo "ssr">>/etc/rc.local
+
+else
+ 
+mkdir /var/www/html/resources
+cd /var/www/html/resources/
+\cp -rf /home/files/jk.zip /var/www/html/resources/jk.zip
+unzip jk.zip >/dev/null 2>&1
+rm -rf jk.zip
+chmod 777 monitore.sh
+chmod 777 monitoreudp.sh
+chmod 777 monitoreudp2.sh
+chmod 777 sha.sh
+chmod 777 sha1.sh
+chmod 777 sha2.sh
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitore.sh
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/shijian=5/'shijian=$jktime'/g' /var/www/html/resources/monitoreudp2.sh
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitore.sh
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/3306/'$dbport'/g' /var/www/html/resources/monitoreudp2.sh
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitore.sh
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/mysqlpass/'$dbpass'/g' /var/www/html/resources/monitoreudp2.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitore.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitoreudp.sh
+sed -i 's/mysqldb/'$dbname'/g' /var/www/html/resources/monitoreudp2.sh
+echo "vpn">>/etc/rc.local
+echo "ssr">>/etc/rc.local
+fi
+cp /var/www/html/shadowsocksr-release.apk /home/shadowsocksr-release.apk
+cp /var/www/html/HTML-ws.apk /home/HTML-ws.apk
+vpn
+ssr
+#
+
+cd /home/
+cp /home/files/HtmlOS-openvpn.zip /home/HtmlOS-openvpn.zip
+tar -zcvf $dbname".tar.gz" ./{HtmlOS-openvpn.zip,HTML-ws.apk,shadowsocksr-release.apk,info.txt} >/dev/null 2>&1
+cp /home/$dbname".tar.gz" /var/www/html/$dbname".tar.gz"
+rm -rf /var/www/html/htmlos.sql
+rm -rf /etc/openvpn/ca
+rm -rf /root/libsodium-1.0.10.tar.gz
+rm -rf /root/PDO_MYSQL-1.0.2.tgz
+rm -rf /var/www/html/htmlos.sql
+rm -rf /home/*
+rm -rf /var/www/html/os20170323211278.zip
+chmod 777 /var/www/html/resources/openvpn-status.txt
+chmod -R 0777 /var/www/html
+chmod 777 /var/www/html/resources/openvpn-statusudp.txt
+chmod 777 /var/www/html/resources/openvpn-statusudp2.txt
+chmod 0777 /var/www/html/resources/*
+sed -i 's/AllowUsers root@120.24.5.17/#Port 22/g' /etc/ssh/sshd_config;
+history -c
+systemctl restart sshd;
+echo "HTML OS 2.1安装配置说明 
+==========================================================================
+用户前台地址：${IP}:${webport}
+后台管理地址：${IP}:${webport}/admin
+数据库后台地址：${IP}:${webport}/${dbname}/phpmyadmin
+-----------------------------------
+数据库名：${dbname}
+数据库用户名：${dbuser} 数据库密码：${dbpass}
+管理员用户名：admin 管理密码：${q}
+
+当前版本为：Html OS v2.1.0
+
+流控结合OpenVpn+ShadowSocksR ，一人多号模式
+
+OpenVpn默认开启翻墙功能，ShadowSocksR支持单端口多用户，详细使用方法请查看官网说明
+
+此版本已不局限于免流应用，其他方面均可涉及.
+
+官方使用说明文档：http://www.mlhtml.cn/os.html
+
+=========================================================================="
+echo "相关文件下载链接：
+http://${IP}:${webport}/${dbname}.tar.gz"
+exit 0;
+exit 0;

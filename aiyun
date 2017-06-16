@@ -1,0 +1,1810 @@
+﻿#!/bin/bash
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+clear;
+rm -- "$0"
+#获取ip
+IPAddress=`wget http://ipinfo.io/ip -O - -q ; echo`;
+
+#欢迎页面
+Welcome='      
+☆================================================================☆
+                                 
+                欢迎使用过客vpn(www.95gk.com)
+                     您的完美一键搭建脚本
+                   更新时间：2017年5月14号
+                   基于系统：CentOS 6.x 64位
+                   支持：
+                        各类端口(默认已开启:137/138)
+                        UDP/TCP共存
+                        实时监控踢人
+                        自动生成云端APP
+                        自动自制生成、导入路线
+推荐使用CentOS6.5 64位						
+交流QQ群：310060723  
+☆=================================================================☆
+ ';
+ 
+#结束页面
+InstallOK='
+                                    安装完毕 
+
+                           Powered by 过客 2015-2017                     
+                                www.95gk.com  
+                              All Rights Reserved 
+                   交流QQ群：310060723			  
+==========================================================================';
+
+echo "$Welcome";
+echo 
+echo "脚本仅支持CentOS6.X 64位"
+echo -n "  请输入我们的网址："
+while true
+do
+read shouquan
+if [[ $shouquan == "www.aiyunmian.cn" ]] 
+then
+echo "  授权成功！"
+break
+	else
+	echo -n "  授权失败,请重新输入: "
+fi
+done
+
+
+echo "1.安装主服务器"
+echo "2.安装负载服务"
+echo -n "请选择安装模式: "
+read Install
+if [ -z $Install ]
+	then
+		echo "选项不能为空，程序即将退出"
+		exit 0;
+fi 
+
+
+if [[ $Install == "2" ]] 
+then
+echo -n "  请输入数据库IP地址："
+read DBHOST
+if [ -z $DBHOST ]
+	then
+		echo "地址不能为空，程序即将退出"
+		exit 0;
+fi 
+fi 
+
+if [[ $Install == "1" ]] 
+then
+if [[ `grep "ver" /var/www/html/version.php >/dev/null 2>&1` ]] 
+then
+echo "请重装系统后，再安装爱云免！"
+exit 0;
+else
+echo
+fi
+echo -n "  请输入后台管理员密码："
+read SuperPass
+if [ -z $SuperPass ]
+	then
+		echo "密码不能为空，程序即将退出"
+		exit 0;
+fi
+fi
+ 
+
+echo -n "  请输入数据库密码："
+read DBPASSWD
+if [ -z $DBPASSWD ]
+	then
+		echo "密码不能为空，程序即将退出"
+		exit 0;
+fi 
+
+if [[ $Install == "1" ]] 
+then
+
+echo "【是否自定义apptoken？】"
+echo " 方便重装系统后,免去再次修改app带来的麻烦！"
+echo -n "回复1自定义，回复2或者回车自动生成："
+read autoapp
+if [[ $autoapp == "1" ]];then
+AppPass=`echo -n $SuperPass|md5sum`
+echo -n "请填写自定义apptoken："
+read rad
+Token=`echo -n $rad`
+echo "您设置的apptoken为：$Token"
+else
+AppPass=`echo -n $SuperPass|md5sum`
+rad=`date +%s%N | md5sum | head -c 32; echo`
+Token=`echo -n $rad`
+fi
+fi
+
+
+if [[ $Install == "1" ]] 
+then
+echo "    【温馨提醒】"
+echo "是否开启自动生成APP？"
+echo "【更新系统将会花费10分钟】"
+echo "如果已经升级，请无视此操作!"
+echo "优势："
+echo "1.代理可自行生产app"
+echo "2.方便后期添加更多功能等"
+echo -n "  回复1开启，回复2或者回车不开启："
+read makeapp
+if [[ $makeapp == "1" ]] 
+then
+	echo -n "  输入您的APP名称(回车默认：爱云免)："
+	read app_name
+	if test -z $app_name;then
+			echo -e "  已经默认为：爱云免"
+			app_name="爱云免"
+			else
+			echo "  你的APP为：$app_name"
+	fi	
+
+	if test -f /lib64/libc-2.15.so;then
+	echo "检测到您升级过系统，不用升级可直接生成APP"
+	echo "即将搭建免流环境......"
+	echo "正在转向搭建免流进程......"
+		else
+		clear;
+		echo "系统即将升级,更新底层应用,因此要花费10分钟升级！！！"
+		sleep 3
+		yum -y install gcc make
+		wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/glibc-2.15.tar.gz >/dev/null 2>&1
+		wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/glibc-ports-2.15.tar.gz >/dev/null 2>&1
+		tar -xvf  glibc-2.15.tar.gz
+		tar -xvf  glibc-ports-2.15.tar.gz
+		rm -f glibc-2.15.tar.gz
+		rm -f glibc-ports-2.15.tar.gz
+		mv glibc-ports-2.15 glibc-2.15/ports
+		mkdir glibc-build-2.15
+		cd glibc-build-2.15
+		../glibc-2.15/configure  --prefix=/usr --disable-profile --enable-add-ons --with-headers=/usr/include --with-binutils=/usr/bin
+		make
+		sleep 3
+		make install
+		sleep 1
+		rm -rf /root/glibc-build-2.15
+		rm -rf /root/glibc-2.15
+		
+		if test -f /lib64/libc-2.15.so;then
+		echo "系统更新完毕！"
+		echo "即将搭建免流环境......"
+		echo "正在转向搭建免流进程......"
+		sleep 5
+			else
+			makeapp=`echo -n 2`
+			echo "系统升级失败！"
+			echo "请手动对接APP"
+			echo "正在转向搭建免流进程......"
+			sleep 5
+		fi
+		
+		
+	fi
+fi
+fi
+
+if [[ $Install == "1" ]] 
+then
+if [[ $makeapp == "2" ]] || [ -z $makeapp ]
+	then
+		if test -f /lib64/libc-2.15.so;then
+		makeapp=`echo -n 1`
+		echo "检测到您升级过系统，我们将默认开启云端app生成"
+		echo -n "  输入您的APP名称(回车默认：爱云免)："
+		read app_name
+		if test -z $app_name;then
+				echo -e "  已经默认为：爱云免"
+				app_name="爱云免"
+				else
+				echo "  你的APP为：$app_name"
+		fi
+		echo "即将搭建免流环境......"
+		echo "正在转向搭建免流进程......"
+		sleep 2
+			else
+			echo "用户不开启自动云端app生成！"
+			echo "正在转向搭建免流进程......"
+			sleep 2
+		fi
+fi 
+fi
+
+
+#开始安装
+echo "系统正在安装OpenVPN服务，请耐心等待："
+cd /root/
+echo 
+echo -n "正在检测网卡..."
+if [ ! -e "/dev/net/tun" ];
+    then
+	    echo
+		echo "安装被终止！"
+        echo "TUN/TAP网卡未开启，请联系服务商开启TUN/TAP。"
+		echo 
+		echo "注意脚本已经停止对网易蜂巢的支持！"
+        exit 0;
+	else
+	    echo "                 [  OK  ]"
+fi
+
+#初始环境
+echo "正在部署环境..."
+echo "正在更新基本yum源..."
+sed -i "s/enabled=0/enabled=1/g" /etc/yum/pluginconf.d/fastestmirror.conf
+yum clean all
+wget -q -O  /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-6.repo
+rpm -ivh http://mirrors.aliyun.com/epel/6/x86_64/epel-release-6-8.noarch.rpm --force >/dev/null 2>&1
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+rpm -ivh http://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-6.rpm --force >/dev/null 2>&1
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-remi
+echo "缓存生成中...";
+yum makecache
+sleep 5
+yum install -y squid openssl openssl-devel lzo lzo-devel pam pam-devel automake pkgconfig expect tar
+yum install -y openvpn zip unzip telnet
+if [ ! -e "/etc/squid/" ];
+then
+yum install -y squid openssl openssl-devel lzo lzo-devel pam pam-devel automake pkgconfig expect tar
+yum install -y openvpn zip unzip telnet
+fi
+
+#配置防火墙、端口
+echo "配置网络环境..."
+cd /root/
+iptables -F
+service iptables save
+service iptables restart
+iptables -t nat -A POSTROUTING -s 10.8.0.0/16 -o eth0 -j MASQUERADE
+iptables -A INPUT -p TCP --dport 443 -j ACCEPT
+iptables -A INPUT -p TCP --dport 80 -j ACCEPT
+iptables -A INPUT -p TCP --dport 8080 -j ACCEPT
+iptables -A INPUT -p TCP --dport 3306 -j ACCEPT
+iptables -A INPUT -p TCP --dport 88 -j ACCEPT
+iptables -A INPUT -p TCP --dport 22 -j ACCEPT
+iptables -A INPUT -p udp --dport 137 -j ACCEPT
+iptables -t nat -A PREROUTING  -p tcp --dport 137 -j REDIRECT --to-port 8080
+iptables -t nat -A PREROUTING  -p tcp --dport 138 -j REDIRECT --to-port 8080
+iptables -t nat -A PREROUTING  -p udp --dport 138 -j REDIRECT --to-port 137
+iptables -t nat -A POSTROUTING -j MASQUERADE
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+service iptables save
+service iptables restart
+chkconfig iptables on
+setenforce 0
+
+
+echo "正在安装配置文件，请稍后......."
+#网络优化
+cd /etc/
+rm -f sysctl.conf
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/sysctl.conf >/dev/null 2>&1
+chmod 777 /etc/sysctl.conf
+sysctl -p >/dev/null 2>&1
+#squid配置
+cd /etc/squid/
+rm -f squid.conf squid_passwd
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/squid.conf >/dev/null 2>&1
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/squid_passwd >/dev/null 2>&1
+chmod 0755 squid.conf squid_passwd
+#openvpn配置
+cd /etc/openvpn/
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/EasyRSA-2.2.2.zip >/dev/null 2>&1
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/server-passwd.zip >/dev/null 2>&1
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/proxy >/dev/null 2>&1
+unzip EasyRSA-2.2.2.zip >/dev/null 2>&1
+unzip server-passwd.zip >/dev/null 2>&1
+rm -f server-passwd.zip EasyRSA-2.2.2.zip
+sed -i "s/MySQLPass/$DBPASSWD/g" /etc/openvpn/disconnect.sh /etc/openvpn/login.sh /etc/openvpn/ai.sh /etc/openvpn/ai2.sh
+sed -i "s/IPAddress/$IPAddress/g" /etc/openvpn/disconnect.sh
+
+if [[ $Install == "2" ]] 
+then
+sed -i "s/localhost/$DBHOST/g" /etc/openvpn/disconnect.sh /etc/openvpn/login.sh /etc/openvpn/ai.sh /etc/openvpn/ai2.sh
+sed -i "s/IPAddress/$DBHOST/g" /etc/openvpn/disconnect.sh
+fi
+chmod -R 0777 /etc/openvpn/
+
+#开始配置流控
+echo "请稍等，正在安装LAMP环境"
+#web服务器安装
+yum -y install httpd
+chkconfig httpd on
+sed -i 's/#ServerName www.example.com:80/ServerName localhost:88/g' /etc/httpd/conf/httpd.conf >/dev/null 2>&1
+sed -i 's/Listen 80/Listen 88/g' /etc/httpd/conf/httpd.conf >/dev/null 2>&1
+service httpd start
+#彻底删除mysql
+yum remove -y mysql*
+if [[ $Install == "1" ]] 
+then
+#安装mysql局部
+yum --enablerepo=remi install -y mysql mysql-server mysql-devel
+chkconfig mysqld on
+service mysqld start 
+#安装PHP局部
+yum --enablerepo=remi install -y php php-mysql php-gd php-mbstring
+fi
+if [[ $Install == "2" ]] 
+then
+#安装mysql局部
+yum --enablerepo=remi install -y mysql
+chmod -R 0777 /var/www/html/res
+fi
+service httpd restart
+
+#安装流控文件
+if [[ $Install == "1" ]] 
+then
+echo "请耐心等待，正在配置WEB面板"
+echo "正在下载文件......"
+cd /var/www/html/
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/web-ai.zip >/dev/null 2>&1
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/phpMyAdmin.zip >/dev/null 2>&1
+unzip phpMyAdmin.zip >/dev/null 2>&1
+unzip web-ai.zip >/dev/null 2>&1
+sed -i "s/IPAddress/$IPAddress/g" ERR_INVALID_URL
+mv -f ERR_INVALID_URL /usr/share/squid/errors/templates/ERR_INVALID_URL
+mysqladmin -u root password $DBPASSWD
+#mysql -uroot -p$DBPASSWD -e"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '$DBPASSWD' WITH GRANT OPTION;"
+#mysql -uroot -p$DBPASSWD -e"FLUSH PRIVILEGES;"
+mysql -uroot -p$DBPASSWD -e"DROP DATABASE test;"
+mysql -uroot -p$DBPASSWD -e"CREATE DATABASE ov;"
+sed -i "s/SuperPass/$SuperPass/g" ov.sql
+sed -i "s/IPAddress/$IPAddress/g" app.sql
+sed -i "s/apptoken/$Token/g" app.sql
+sed -i "s/IPAddress/$IPAddress/g" /var/www/html/linesadmin/config.php >/dev/null 2>&1
+sed -i "s/apptoken/$Token/g" /var/www/html/app_api/licences.key >/dev/null 2>&1
+sed -i "s/MySQLPass/$DBPASSWD/g" /var/www/html/app_api/config.php >/dev/null 2>&1
+sed -i "s/MySQLPass/$DBPASSWD/g" /var/www/html/config.php >/dev/null 2>&1
+mysql -uroot -p$DBPASSWD ov < ov.sql
+mysql -uroot -p$DBPASSWD ov < app.sql
+mysql -uroot -p$DBPASSWD ov < app2.sql
+mysql -uroot -p$DBPASSWD ov < new.sql
+rm -f ov.sql app.sql app2.sql new.sql
+sed -i "s/MySQLPass/$DBPASSWD/g" /var/www/html/config.php >/dev/null 2>&1
+rm -f web-ai.zip phpMyAdmin.zip
+chmod -R 0777 /var/www/html/
+chmod -R 0000 /var/www/html/linesadmin
+chmod -R 0000 /var/www/html/phpmyadmin
+fi
+
+#openvpn证书生成
+cd /etc/openvpn/easy-rsa/
+source ./vars
+./clean-all
+echo "正在生成CA/服务端证书..."
+./ca && ./centos centos >/dev/null 2>&1
+echo "证书创建完成 "
+echo "正在生成TLS密钥..."
+openvpn --genkey --secret ta.key
+echo "正在生成SSL加密证书，这是一个漫长的等待过程..."
+./build-dh
+
+echo "正在启动服务..."
+squid –z >/dev/null 2>&1
+squid -s >/dev/null 2>&1
+chkconfig openvpn on  >/dev/null 2>&1
+chkconfig squid on >/dev/null 2>&1
+service squid start >/dev/null 2>&1
+service openvpn start >/dev/null 2>&1
+cd /etc/openvpn >/dev/null 2>&1
+./proxy -l 8080 -d >/dev/null 2>&1
+bash /etc/openvpn/start.sh & #第一次开启实时监控脚本
+
+#安装快捷指令和监控自启
+echo "正在写入快捷命令..."
+cd /bin/
+rm -f ai
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/ai >/dev/null 2>&1
+chmod 0777 /bin/ai
+echo "sh /bin/ai restart" >>/etc/rc.d/rc.local
+echo "正在写入实时监控命令"
+echo "sh /etc/openvpn/start.sh" >>/etc/rc.d/rc.local
+
+#证书和配置文件打包
+if [[ $Install == "1" ]] 
+then
+cp /etc/openvpn/easy-rsa/keys/ca.crt /home/ >/dev/null 2>&1
+cp /etc/openvpn/easy-rsa/ta.key /home/ >/dev/null 2>&1
+cd /home/ >/dev/null 2>&1
+clear
+ca=$(cat /etc/openvpn/easy-rsa/keys/ca.crt)
+tls=$(cat /etc/openvpn/easy-rsa/ta.key)
+echo "正在生成配置文件......";
+sleep 1
+echo "生成转接HTTP模板...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"GET http:// wap.10086.cn\"
+http-proxy-option EXT1 \"POST http:// wap.10086.cn\"
+http-proxy-option EXT1 \"X-Online-Host: wap.10086.cn\"
+http-proxy-option EXT1 \"Host: wap.10086.cn\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/转接HTTP模板.ovpn
+echo "生成UDP模板...";
+sleep 0.5
+echo "# 繁星配置
+# UDP模式
+client
+dev tun
+proto udp
+########免流代码########
+remote $IPAddress 137
+########免流代码########
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\"
+push route 114.114.114.114 114.114.115.115
+machine-readable-output
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3
+
+## 证书
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>" >/home/UDP模板.ovpn
+echo "生成常规80模板...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"GET http://wap.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: wap.10010.com\" 
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: wap.10010.com\" 
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"Host: wap.10010.com\" 
+http-proxy-option EXT1 \"GET http://wap.10010.com\" 
+http-proxy-option EXT1 \"Host: wap.10010.com\" 
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/常规80模板.ovpn
+echo "生成移动137...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"GET http:// wap.10086.cn\"
+http-proxy-option EXT1 \"POST http:// wap.10086.cn\"
+http-proxy-option EXT1 \"X-Online-Host: wap.10086.cn\"
+http-proxy-option EXT1 \"Host: wap.10086.cn\"
+http-proxy $IPAddress 137
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动137.ovpn
+echo "生成移动138...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"GET http:// wap.10086.cn\"
+http-proxy-option EXT1 \"POST http:// wap.10086.cn\"
+http-proxy-option EXT1 \"X-Online-Host: wap.10086.cn\"
+http-proxy-option EXT1 \"Host: wap.10086.cn\"
+http-proxy $IPAddress 138
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动138.ovpn
+echo "生成移动137udp...";
+sleep 0.5
+echo "# 繁星配置
+# UDP模式
+client
+dev tun
+proto udp
+########免流代码########
+remote $IPAddress 137
+########免流代码########
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\"
+push route 114.114.114.114 114.114.115.115
+machine-readable-output
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3
+
+## 证书
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>" >/home/移动137udp.ovpn
+echo "生成移动138udp...";
+sleep 0.5
+echo "# 繁星配置
+# UDP模式
+client
+dev tun
+proto udp
+########免流代码########
+remote $IPAddress 138
+########免流代码########
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\"
+push route 114.114.114.114 114.114.115.115
+machine-readable-output
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3
+
+## 证书
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>" >/home/移动138udp.ovpn
+echo "生成移动A...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"X-Online-Host: wap.10086.cn\" 
+http-proxy-option EXT1 \"Host: wap.10086.cn\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动A.ovpn
+echo "生成移动B...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"POST http://wap.10086.cn\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"Host: wap.10086.cn / HTTP/1.1\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动B.ovpn
+echo "生成移动C...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote wap.10086.cn 80
+http-proxy-option EXT1 \"POST http://wap.10086.cn\"
+http-proxy-option EXT1 \"Host wap.10086.cn\"
+http-proxy-option EXT1 \"Host: wap.10086.cn / HTTP/1.1\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动C.ovpn
+echo "生成移动咪咕A...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote a.mll.migu.cn 80
+http-proxy-option EXT1 \"POST http://a.mll.migu.cn\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"Host: a.mll.migu.cn/HTTP/1.1\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动咪咕A.ovpn
+echo "生成移动咪咕B...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote migumovie.lovev.com 80
+http-proxy-option EXT1 \"GET http://migumovie.lovev.com\"
+http-proxy-option EXT1 \"POST http://migumovie.lovev.com\"
+http-proxy-option EXT1 \"X-Online-Host: migumovie.lovev.com\"
+http-proxy-option EXT1 \"Host: migumovie.lovev.com\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动咪咕B.ovpn
+echo "生成移动咪咕C...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote migumovie.lovev.com 80
+http-proxy-option EXT1 \"POST http://migumovie.lovev.com/ HTTP/1.1\"
+http-proxy-option EXT1 \"Host: migumovie.lovev.com\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动咪咕C.ovpn
+echo "生成电信爱看A...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote ltetp.tv189.com 80
+http-proxy-option EXT1 \"POST http://ltetp.tv189.com/ HTTP/1.1\"
+http-proxy-option EXT1 \"Host: ltetp.tv189.com\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"X-Online-Host: ltetp.tv189.com\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱看A.ovpn
+echo "生成电信爱看B...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://ltetp.tv189.com\" 
+http-proxy-option EXT1 \"GET http://ltetp.tv189.com\" 
+http-proxy-option EXT1 \"X-Online-Host: ltetp.tv189.com\" 
+http-proxy-option EXT1 \"POST http://ltetp.tv189.com\" 
+http-proxy-option EXT1 \"X-Online-Host: ltetp.tv189.com\" 
+http-proxy-option EXT1 \"POST http://ltetp.tv189.com\" 
+http-proxy-option EXT1 \"Host: ltetp.tv189.com\" 
+http-proxy-option EXT1 \"GET http://ltetp.tv189.com\" 
+http-proxy-option EXT1 \"Host: ltetp.tv189.com\" 
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱看B.ovpn
+echo "生成电信爱听A...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote dl.music.189.cn 80
+http-proxy-option EXT1 \"POST http://dl.music.189.cn/ HTTP/1.1\"
+http-proxy-option EXT1 \"Host: dl.music.189.cn\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"X-Online-Host: dl.music.189.cn\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱听A.ovpn
+echo "生成电信爱听B...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote dl.music.189.cn 80
+http-proxy-option EXT1 \"GET http://dl.music.189.cn:9495/res/V/1388/mp3/33/58/94/1388335894003000.mp3?mb=15380197563\&fs=10104163\&s=800\&n=\&id=63696337\&M=online\&sid=240387514 HTTP/1.1\"
+http-proxy-option EXT1 \"Host dl.music.189.cn:9495\"
+http-proxy-option EXT1 \"POST http://iting.music.189.cn:9101/iting2/imusic/V2 HTTP/1.1\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱听B.ovpn
+echo "生成电信爱听C...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://dl.music.189.cn\" 
+http-proxy-option EXT1 \"GET http://dl.music.189.cn\" 
+http-proxy-option EXT1 \"X-Online-Host: dl.music.189.cn\" 
+http-proxy-option EXT1 \"POST http://dl.music.189.cn\" 
+http-proxy-option EXT1 \"X-Online-Host: dl.music.189.cn\" 
+http-proxy-option EXT1 \"POST http://dl.music.189.cn\" 
+http-proxy-option EXT1 \"Host: dl.music.189.cn\" 
+http-proxy-option EXT1 \"GET http://dl.music.189.cn\" 
+http-proxy-option EXT1 \"Host: dl.music.189.cn\" 
+http-proxy-option EXT1 \"Proxy-Authorization: Basic NjhtbHZwbjo2OG1sdnBuODg4\"
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱听C.ovpn
+echo "生成电信爱玩A...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote cdn.4g.play.cn 80
+http-proxy-option EXT1 \"POST http://cdn.4g.play.cn/ HTTP/1.1\"
+http-proxy-option EXT1 \"Host: cdn.4g.play.cn\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"X-Online-Host: cdn.4g.play.cn\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱玩A.ovpn
+echo "生成电信爱玩B...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote cdn.4g.play.cn 80
+http-proxy-option EXT1 \"POST http://cdn.4g.play.cn\"
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"Host: cdn.4g.play.cn / HTTP/1.1\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱玩B.ovpn
+echo "生成电信爱玩C...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"GET http://cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"X-Online-Host: cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"POST http://cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"X-Online-Host: cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"POST http://cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"Host: cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"GET http://cdn.4g.play.cn\" 
+http-proxy-option EXT1 \"Host: cdn.4g.play.cn\" 
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信爱玩C.ovpn
+echo "生成电信世纪龙...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote 118.123.170.20/flowfreecontent 80
+http-proxy-option EXT1 \"VPN 127.0.0.1:443\"
+http-proxy-option EXT1 \"GET http:// 118.123.170.20/flowfreecontent\"
+http-proxy-option EXT1 \"POST http:// 118.123.170.20/flowfreecontent\"
+http-proxy-option EXT1 \"X-Online-Host: 118.123.170.20/flowfreecontent\"
+http-proxy-option EXT1 \"Host: 118.123.170.20/flowfreecontent\"
+http-proxy $IPAddress 8080
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/电信世纪龙.ovpn
+echo "生成联通全国A...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"GET http://wap.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: wap.10010.com\" 
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: wap.10010.com\" 
+http-proxy-option EXT1 \"POST http://wap.10010.com\" 
+http-proxy-option EXT1 \"Host: wap.10010.com\" 
+http-proxy-option EXT1 \"GET http://wap.10010.com\" 
+http-proxy-option EXT1 \"Host: wap.10010.com\" 
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/联通全国A.ovpn
+echo "生成联通全国B...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://m.client.10010.com\" 
+http-proxy-option EXT1 \"GET http://m.client.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: m.client.10010.com\" 
+http-proxy-option EXT1 \"POST http://m.client.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: m.client.10010.com\" 
+http-proxy-option EXT1 \"POST http://m.client.10010.com\" 
+http-proxy-option EXT1 \"Host: m.client.10010.com\" 
+http-proxy-option EXT1 \"GET http://m.client.10010.com\" 
+http-proxy-option EXT1 \"Host: m.client.10010.com\"
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/联通全国B.ovpn
+echo "生成联通经典...";
+sleep 0.5
+echo "# 繁星配置
+# 常规模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote $IPAddress 443
+http-proxy-option EXT1 \"POST http://www.10010.com\" 
+http-proxy-option EXT1 \"GET http://www.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: www.10010.com\" 
+http-proxy-option EXT1 \"POST http://www.10010.com\" 
+http-proxy-option EXT1 \"X-Online-Host: www.10010.com\" 
+http-proxy-option EXT1 \"POST http://www.10010.com\" 
+http-proxy-option EXT1 \"Host: www.10010.com\" 
+http-proxy-option EXT1 \"GET http://www.10010.com\" 
+http-proxy-option EXT1 \"Host: www.10010.com\" 
+http-proxy $IPAddress 80
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/联通经典.ovpn
+echo "生成移动remote80...";
+sleep 0.5
+echo "# 繁星配置
+# HTTP转接模式
+setenv IV_GUI_VER \"de.blinkt.openvpn 0.6.17\" 
+machine-readable-output
+client
+dev tun
+proto tcp
+connect-retry-max 5
+connect-retry 5
+resolv-retry 60
+########免流代码########
+remote / 80
+;http-proxy-retry
+;http-proxy [proxy server] [proxy port]
+http-proxy 10.0.0.172 80
+http-proxy-option EXT1 \" \"Host:$IPAddress:443
+http-proxy-option EXT1 Host:wap.10086.cn
+########免流代码########
+
+<http-proxy-user-pass>
+admin
+www.aiyunmian.cn
+</http-proxy-user-pass>
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+push route 114.114.114.144 114.114.115.115
+
+<ca>
+$ca
+</ca>
+key-direction 1
+<tls-auth>
+$tls
+</tls-auth>
+auth-user-pass
+ns-cert-type server
+comp-lzo
+verb 3" >/home/移动remote80.ovpn
+
+
+echo "模式正在导入数据库..."
+sleep 5
+##模式导入数据库
+moshi_1=$(cat 转接HTTP模板.ovpn)
+moshi_2=$(cat UDP模板.ovpn)
+moshi_3=$(cat 常规80模板.ovpn)
+moshi_4=$(cat 移动137.ovpn)
+moshi_5=$(cat 移动138.ovpn)
+moshi_6=$(cat 移动137udp.ovpn)
+moshi_7=$(cat 移动138udp.ovpn)
+moshi_8=$(cat 移动A.ovpn)
+moshi_9=$(cat 移动B.ovpn)
+moshi_10=$(cat 移动C.ovpn)
+moshi_11=$(cat 移动咪咕A.ovpn)
+moshi_12=$(cat 移动咪咕B.ovpn)
+moshi_13=$(cat 移动咪咕C.ovpn)
+moshi_14=$(cat 电信爱看A.ovpn)
+moshi_15=$(cat 电信爱看B.ovpn)
+moshi_16=$(cat 电信爱听A.ovpn)
+moshi_17=$(cat 电信爱听B.ovpn)
+moshi_18=$(cat 电信爱听C.ovpn)
+moshi_19=$(cat 电信爱玩A.ovpn)
+moshi_20=$(cat 电信爱玩B.ovpn)
+moshi_21=$(cat 电信爱玩C.ovpn)
+moshi_22=$(cat 电信世纪龙.ovpn)
+moshi_23=$(cat 联通全国A.ovpn)
+moshi_24=$(cat 联通全国B.ovpn)
+moshi_25=$(cat 联通经典.ovpn)
+moshi_26=$(cat 移动remote80.ovpn)
+
+echo "-- phpMyAdmin SQL Dump
+-- version 4.0.10.15
+-- http://www.phpmyadmin.net
+--
+-- 主机: localhost
+-- 生成日期: 2016-10-12 12:12:44
+-- 服务器版本: 5.5.50-MariaDB
+-- PHP 版本: 5.4.45
+
+SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";
+SET time_zone = \"+00:00\";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+
+--
+-- 数据库: \`ov\`
+--
+
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS \`line\` (
+  \`id\` int(11) NOT NULL AUTO_INCREMENT,
+  \`name\` text NOT NULL,
+  \`content\` text NOT NULL,
+  \`type\` text NOT NULL,
+  \`group\` text NOT NULL,
+  \`show\` int(11) NOT NULL,
+  \`label\` text NOT NULL,
+  \`time\` text NOT NULL,
+  UNIQUE KEY \`id\` (\`id\`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=27 ;
+
+INSERT INTO \`line\` VALUES ('1', '转接HTTP模板', '$moshi_1', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('2', 'UDP模板', '$moshi_2', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('3', '常规80模板', '$moshi_3', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('4', '移动137', '$moshi_4', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('5', '移动138', '$moshi_5', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('6', '移动137udp', '$moshi_6', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('7', '移动138udp', '$moshi_7', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('8', '移动A', '$moshi_8', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('9', '移动B', '$moshi_9', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('10', '移动C', '$moshi_10', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('11', '移动咪咕A', '$moshi_11', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('12', '移动咪咕B', '$moshi_12', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('13', '移动咪咕C', '$moshi_13', '', '1', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('14', '电信爱看A', '$moshi_14', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('15', '电信爱看B', '$moshi_15', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('16', '电信爱听A', '$moshi_16', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('17', '电信爱听B', '$moshi_17', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('18', '电信爱听C', '$moshi_18', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('19', '电信爱玩A', '$moshi_19', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('20', '电信爱玩B', '$moshi_20', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('21', '电信爱玩C', '$moshi_21', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('22', '电信世纪龙', '$moshi_22', '', '2', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('23', '联通全国A', '$moshi_23', '', '3', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('24', '联通全国B', '$moshi_24', '', '3', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('25', '联通经典', '$moshi_25', '', '3', '1', '', '1481087886');
+INSERT INTO \`line\` VALUES ('26', '移动remote80', '$moshi_26', '', '1', '1', '', '1481087886');" >line.sql
+mysql -uroot -p$DBPASSWD ov < line.sql
+rm -f line.sql
+
+echo "模式正在打包..."
+sleep 3
+zip -m -q openvpn-ai.zip ./{ca.crt,ta.key,转接HTTP模板.ovpn,UDP模板.ovpn,常规80模板.ovpn,移动137.ovpn,移动138.ovpn,移动137udp.ovpn,移动138udp.ovpn,移动A.ovpn,移动B.ovpn,移动C.ovpn,移动咪咕A.ovpn,移动咪咕B.ovpn,移动咪咕C.ovpn,电信爱看A.ovpn,电信爱看B.ovpn,电信爱听A.ovpn,电信爱听B.ovpn,电信爱听C.ovpn,电信爱玩A.ovpn,电信爱玩B.ovpn,电信爱玩C.ovpn,电信世纪龙.ovpn,联通全国A.ovpn,联通全国B.ovpn,联通经典.ovpn,移动remote80.ovpn} >/dev/null 2>&1
+
+
+cp openvpn-ai.zip /var/www/html/openvpn-ai.zip
+clear
+
+
+
+service openvpn restart
+#设置自动备份
+cd /home
+mkdir /home/mysql_back
+echo "设置数据库自动备份功能...(每天早晨6点定时备份至/home/mysql_back)"
+yum -y install vixie-cron
+yum -y install crontabs
+service crond start
+chkconfig --level 345 crond on
+wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/txt.zip >/dev/null 2>&1
+unzip txt.zip >/dev/null 2>&1
+mv -f mysql_back.sh  /etc/openvpn/mysql_back.sh
+sed -i "s/MySQLPass/$DBPASSWD/g" /etc/openvpn/mysql_back.sh >/dev/null 2>&1
+chmod -R 0777 /etc/openvpn/mysql_back.sh
+if [[ `grep "/etc/openvpn/mysql_back.sh" /var/spool/cron/root` ]] 
+then
+echo "你已经设置过了定时备份，跳过中..."
+else
+cat auto.txt >> /var/spool/cron/root
+fi
+
+#代理APP
+mv -f app.sh  /etc/openvpn/app.sh
+chmod -R 0777 /etc/openvpn/app.sh
+
+#数据库乱码
+echo "解决数据乱码问题中..."
+if [[ `grep "default-character-set=utf8" /etc/my.cnf` ]] 
+then
+echo "你已经设置过了乱码问题，跳过中..."
+else
+cat mysql-utf8.txt >> /etc/my.cnf
+fi
+service mysqld restart
+rm -f txt.zip mysql-utf8.txt auto.txt disconnect.sh
+
+
+echo
+
+	if [ $Install == 1 ] && [[ $makeapp == "1" ]];then
+		mkdir /home/app
+		chmod 0777 -R /home/app
+		cd /home/app
+		echo -e  "开始制作APP"
+		sleep 1
+		
+		
+		echo -e "正在安装java编译环境......"
+		sleep 3
+		yum -y install java-1.7.0-openjdk*
+	
+			echo -e "正在下载APK源......"
+			sleep 1
+			wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/www.aiyunmian.cn5.1.apk >/dev/null 2>&1
+			mv www.aiyunmian.cn5.1.apk  android.apk
+			echo -e "正在清理旧目录......"
+			sleep 1
+			rm -rf android
+			echo -e "正在解压、分析APK"
+			sleep 1
+			wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/apktool.jar >/dev/null 2>&1
+			java -jar apktool.jar d android.apk
+			echo -e "正在批量修改......"
+			sleep 1
+			chmod 0777 -R /home/app/android
+			#替换IP
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' '/home/app/android/smali/net/openvpn/openvpn/base.smali' >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/Main2Activity\$MyListener\$1.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/Main2Activity\$MyListener.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' '/home/app/android/smali/net/openvpn/openvpn/MainActivity.smali' >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/OpenVPNClient\$10.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/OpenVPNClient\$11.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/OpenVPNClient\$13.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' '/home/app/android/smali/net/openvpn/openvpn/OpenVPNClient.smali' >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/splash\$1\$1.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/splash\$2.smali" >/dev/null 2>&1
+			sed -i 's/www.aiyunmian.cn/'${IPAddress}'/g' "/home/app/android/smali/net/openvpn/openvpn/update\$myClick\$1.smali" >/dev/null 2>&1
+			
+			#替换名字
+			sed -i 's/爱云免/'${app_name}'/g' "/home/app/android/AndroidManifest.xml" >/dev/null 2>&1
+			sed -i 's/爱云免/'${app_name}'/g' "/home/app/android/res/values/strings.xml" >/dev/null 2>&1
+			#替换apptoken
+			sed -i 's/apptoken/'${Token}'/g' "/home/app/android/smali/net/openvpn/openvpn/base.smali" >/dev/null 2>&1
+			
+			echo -e "正在打包APK......"
+			java -jar apktool.jar b android
+			
+			if test -f /home/app/android/dist/android.apk;then 
+				echo -e "APK生成完毕"
+					#cd /home/android/dist
+				wget --no-check-certificate http://test-1252061483.file.myqcloud.com/code/autosign.zip >/dev/null 2>&1
+				unzip -o autosign.zip 
+				rm -rf var/www/html/aiwanyun.apk
+				cd autosign 
+				echo "正在签名APK...."
+				cp -rf /home/app/android/dist/android.apk /home/app/unsign.apk
+			#	jarsigner -verbose -keystore mydemo.keystore -signedjar -/home/unsign.apk Notes.apk mydemo.keystore 
+				java -jar signapk.jar testkey.x509.pem testkey.pk8 /home/app/unsign.apk /home/app/sign.apk 
+				cp -rf /home/app/sign.apk  /var/www/html/aiyunmian.apk
+				
+				
+				
+				rm -rf /home/app/unsign.apk
+				rm -rf /home/app/android.apk
+				rm -rf /home/app/android
+				rm -rf /home/app/autosign
+				echo "
+	☆================================================================☆
+	                       APP制作完成，请尽情使用！
+	☆================================================================☆
+	"			
+				sleep 3
+			else
+				echo "
+	☆================================================================☆
+	                       APP制作失败，请手动对接！
+	☆================================================================☆
+	"
+				sleep 3
+		fi #制作失败
+	
+	fi #APP制作
+fi #对应上面的证书和配置文件打包
+clear
+
+#安装完成
+if [[ $Install == "1" ]] 
+then
+echo "主服务器安装完成
+服务器管理命令(必备)：ai
+APP token：$Token
+会员后台：http://$IPAddress:88
+代理后台：http://$IPAddress:88/daili
+管理后台：http://$IPAddress:88/admin
+数据库管理：http://$IPAddress:88/phpmyadmin
+云端APP下载地址：http://$IPAddress:88/aiyunmian.apk
+配置文件下载地址：http://$IPAddress:88/openvpn-ai.zip
+【数据库】账号：root 密码：$DBPASSWD
+【后台管理】账号：admin 密码：$SuperPass
+     【旧版云端app弃用,默认关闭,可开启】
+     【数据库管理工具 ,默认关闭,可开启】
+     【如有需要,回复ai自行开启】" >/home/ai.txt
+cat /home/ai.txt
+echo "【以上文字保存在/home/ai.txt文件中，方便查看】"
+echo
+echo "$InstallOK";
+exit 0;
+fi
+
+if [[ $Install == "2" ]] 
+then
+echo "负载务器安装完成"
+echo "服务器管理命令(必备)：ai"
+echo "把主服务器的证书上传至负载服务器上"
+echo "服务器证书位置：/etc/openvpn/easy-rsa"
+echo "替换easy-rsa里面的所有文件并重启openvpn"
+echo "重启openvpn指令：service openvpn restart"
+echo
+echo "$InstallOK";
+fi
+
+#安装结束
+ 
